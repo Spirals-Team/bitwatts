@@ -13,7 +13,7 @@ This project is fully managed with [sbt](http://www.scala-sbt.org/).
 You can follow the latest news and asks questions by subscribing to our [mailing list](https://sympa.inria.fr/sympa/info/powerapi).
 
 ## Publications
-* **Process-level Power Estimation in VM-based Systems**: M. Colmant, M. Kurpicz, L. Huertas, R. Rouvoy, P. Felber. *European Conference on Computer Systems* (EuroSys). 2015, pp.1-12. To appear.
+* **Process-level Power Estimation in VM-based Systems**: M. Colmant, M. Kurpicz, L. Huertas, R. Rouvoy, P. Felber, A. Sobe. *European Conference on Computer Systems* (EuroSys). April 2015, Bordeaux, France. pp.1-14. To appear.
 
 ## Contributing
 If you would like to contribute code you can do so through GitHub by forking the repository and sending a pull request.
