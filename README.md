@@ -1,4 +1,7 @@
 # BitWatts
+[![Build Status](https://travis-ci.org/Spirals-Team/bitwatts.svg)](https://travis-ci.org/Spirals-Team/bitwatts)
+[![Codacy Badge](https://www.codacy.com/project/badge/688093bb28514036ae4cd9ac0fb78868)](https://www.codacy.com/public/maximecolmant/bitwatts)
+
 BitWatts is an extension of [PowerAPI](https://github.com/Spirals-Team/powerapi) for building software-defined power meters inside virtualized environments.
 To have more details on what is a software-defined power meter, please consult: http://powerapi.org.
 
