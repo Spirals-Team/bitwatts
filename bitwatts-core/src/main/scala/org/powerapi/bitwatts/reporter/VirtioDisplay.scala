@@ -70,7 +70,7 @@ class VirtioDisplay(mappings: Map[Int, Int]) extends PowerDisplay with VirtioDis
 
         if(sockets.contains(process)) {
           try {
-            log.debug(s"$power\n")
+            log.debug(s"${power.toWatts}")
             val output = sockets(process.pid).getOutputStream
             output.write(s"${power.toWatts}\n".getBytes)
           }

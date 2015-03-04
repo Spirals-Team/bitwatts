@@ -80,12 +80,12 @@ class VirtioSensorSuite(system: ActorSystem) extends TestKit(system) with Implic
     val (oldGlobalElapsedTime2, oldActiveElapsedTime2) = (globalElapsedTime2 / 2, activeElapsedTime2 / 2)
     val (oldGlobalElapsedTime3, oldActiveElapsedTime3) = (globalElapsedTime3 / 2, activeElapsedTime3 / 2)
 
-    val processRatio1 = TargetUsageRatio((p1ElapsedTime1 - oldP1ElapsedTime1).toDouble / (globalElapsedTime1 - oldGlobalElapsedTime1))
+    val processRatio1 = TargetUsageRatio((p1ElapsedTime1 - oldP1ElapsedTime1).toDouble / (activeElapsedTime1 - oldActiveElapsedTime1))
 
-    val processRatio2 = TargetUsageRatio((p1ElapsedTime2 - oldP1ElapsedTime2).toDouble / (globalElapsedTime2 - oldGlobalElapsedTime2))
-    val appRatio = TargetUsageRatio((appElapsedTime - oldAppElapsedTime).toDouble / (globalElapsedTime2 - oldGlobalElapsedTime2))
+    val processRatio2 = TargetUsageRatio((p1ElapsedTime2 - oldP1ElapsedTime2).toDouble / (activeElapsedTime2 - oldActiveElapsedTime2))
+    val appRatio = TargetUsageRatio((appElapsedTime - oldAppElapsedTime).toDouble / (activeElapsedTime2 - oldActiveElapsedTime2))
 
-    val allRatio = TargetUsageRatio((activeElapsedTime3 - oldActiveElapsedTime3).toDouble / (globalElapsedTime3 - oldGlobalElapsedTime3))
+    val allRatio = TargetUsageRatio((activeElapsedTime3 - oldActiveElapsedTime3).toDouble / (activeElapsedTime3 - oldActiveElapsedTime3))
   }
 
   class MockableBufferedReader extends BufferedReader(mock[Reader])
@@ -145,20 +145,20 @@ class VirtioSensorSuite(system: ActorSystem) extends TestKit(system) with Implic
 
     sensor.underlyingActor.asInstanceOf[VirtioSensor].targetUsageRatio(MonitorTick("", muid1, 1, ClockTick("", 25.milliseconds))) should equal(processRatio1)
     sensor.underlyingActor.asInstanceOf[VirtioSensor].cpuTimesCache(CacheKey(muid1, 1))(0, 0) match {
-      case times => times should equal(p1ElapsedTime1, globalElapsedTime1)
+      case times => times should equal(p1ElapsedTime1, activeElapsedTime1)
     }
 
     sensor.underlyingActor.asInstanceOf[VirtioSensor].targetUsageRatio(MonitorTick("", muid2, 1, ClockTick("", 25.milliseconds))) should equal(processRatio2)
     sensor.underlyingActor.asInstanceOf[VirtioSensor].cpuTimesCache(CacheKey(muid2, 1))(0, 0) match {
-      case times => times should equal(p1ElapsedTime2, globalElapsedTime2)
+      case times => times should equal(p1ElapsedTime2, activeElapsedTime2)
     }
     sensor.underlyingActor.asInstanceOf[VirtioSensor].targetUsageRatio(MonitorTick("", muid2, "app", ClockTick("", 25.milliseconds))) should equal(appRatio)
     sensor.underlyingActor.asInstanceOf[VirtioSensor].cpuTimesCache(CacheKey(muid2, "app"))(0, 0) match {
-      case times => times should equal(appElapsedTime, globalElapsedTime2)
+      case times => times should equal(appElapsedTime, activeElapsedTime2)
     }
     sensor.underlyingActor.asInstanceOf[VirtioSensor].targetUsageRatio(MonitorTick("", muid3, All, ClockTick("", 25.milliseconds))) should equal(allRatio)
     sensor.underlyingActor.asInstanceOf[VirtioSensor].cpuTimesCache(CacheKey(muid3, All))(0, 0) match {
-      case times => times should equal(activeElapsedTime3, globalElapsedTime3)
+      case times => times should equal(activeElapsedTime3, activeElapsedTime3)
     }
 
     Await.result(gracefulStop(sensor, timeout.duration), timeout.duration)

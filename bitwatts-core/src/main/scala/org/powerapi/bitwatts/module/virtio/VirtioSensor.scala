@@ -40,7 +40,7 @@ import scala.reflect.ClassTag
  */
 class VirtioSensor(eventBus: MessageBus, osHelper: OSHelper, port: Int) extends SensorComponent(eventBus) {
   val powerReader: Option[BufferedReader] = try {
-    Some(new BufferedReader(new FileReader(s"/dev/virtio-ports/$port")))
+    Some(new BufferedReader(new FileReader(s"/dev/virtio-ports/port.$port")))
   }
   catch {
     case ex: Throwable => log.warning("i/o exception: {}", s"${ex.getMessage}"); None
@@ -56,7 +56,7 @@ class VirtioSensor(eventBus: MessageBus, osHelper: OSHelper, port: Int) extends 
   def targetUsageRatio(monitorTick: MonitorTick): TargetUsageRatio = {
     val key = CacheKey(monitorTick.muid, monitorTick.target)
 
-    lazy val (globalCpuTime, activeCpuTime) = osHelper.getGlobalCpuTime match {
+    lazy val (_, activeCpuTime) = osHelper.getGlobalCpuTime match {
       case GlobalCpuTime(globalTime, activeTime) => (globalTime, activeTime)
     }
 
@@ -67,9 +67,9 @@ class VirtioSensor(eventBus: MessageBus, osHelper: OSHelper, port: Int) extends 
           case _ => 0l
         }
 
-        (targetCpuTime, globalCpuTime)
+        (targetCpuTime, activeCpuTime)
       }
-      case All => (activeCpuTime, globalCpuTime)
+      case All => (activeCpuTime, activeCpuTime)
     }
 
     val old = cpuTimesCache(key)(now)
@@ -103,7 +103,7 @@ class VirtioSensor(eventBus: MessageBus, osHelper: OSHelper, port: Int) extends 
       powerReader match {
         case Some(reader) => {
           reader.readLine() match {
-            case power: String => power.toDouble.W
+            case power: String => powers(key) = power.toDouble.W; power.toDouble.W
             case _ => 0.W
           }
         }
@@ -112,7 +112,6 @@ class VirtioSensor(eventBus: MessageBus, osHelper: OSHelper, port: Int) extends 
     }
     else powers(key)(0.W)
 
-    powers(key) = power
     timestamps(key) = now
 
     log.debug("Power: {}", s"$power")
