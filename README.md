@@ -13,7 +13,7 @@ The research leading to these results has received funding from the European Com
 This project is fully managed with [sbt](http://www.scala-sbt.org/).
 
 ## Mailing list
-You can follow the latest news and asks questions by subscribing to our [mailing list](https://sympa.inria.fr/sympa/info/powerapi).
+You can follow the latest news and asks questions by subscribing to our <a href="mailto:powerapi@inria.fr">mailing list</a>.
 
 ## Publications
 * **Process-level Power Estimation in VM-based Systems**: M. Colmant, M. Kurpicz, L. Huertas, R. Rouvoy, P. Felber, A. Sobe. *European Conference on Computer Systems* (EuroSys). April 2015, Bordeaux, France. pp.1-14. To appear.
@@ -26,6 +26,7 @@ When submitting code, please make every effort to follow existing conventions an
 ## Acknowledgments
 We all stand on the shoulders of giants and get by with a little help from our friends. BitWatts is written in [Scala](http://www.scala-lang.org) (version 2.11.4 under [3-clause BSD license](http://www.scala-lang.org/license.html)) and built on top of:
 * [PowerAPI](https://github.com/Spirals-Team/powerapi) (version 3.0 under [AGPL license](http://www.gnu.org/licenses/agpl-3.0.html)), for using a software-defined power meter
+* [JUnixSocket](https://code.google.com/p/junixsocket/) (version 1.3 under []()), for using unix domain sockets with quick time accesses
 
 # License
 This software is licensed under the *GNU Affero General Public License*, quoted below.
