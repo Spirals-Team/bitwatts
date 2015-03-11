@@ -8,7 +8,7 @@ To have more details on what is a software-defined power meter, please consult: 
 # About
 BitWatts is an open-source project developed by the [Spirals research group](https://team.inria.fr/spirals) (University of Lille 1 and Inria) in collaboration with the [University of Neuchâtel](http://www2.unine.ch/).
 
-The research leading to these results has received funding from the European Community’s Seventh Framework Programme [FP7/2007- 2013] under the [ParaDIME Project](www.paradime-project.eu), grant agreement no. 318693.
+The research leading to these results has received funding from the European Community’s Seventh Framework Programme [FP7/2007- 2013] under the [ParaDIME Project](http://paradime-project.eu/), grant agreement no. 318693.
 
 This project is fully managed with [sbt](http://www.scala-sbt.org/).
 
