@@ -13,7 +13,7 @@ The research leading to these results has received funding from the European Com
 This project is fully managed with [sbt](http://www.scala-sbt.org/).
 
 ## Mailing list
-You can follow the latest news and asks questions by subscribing to our <a href="mailto:powerapi@inria.fr">mailing list</a>.
+You can follow the latest news and asks questions by subscribing to our <a href="mailto:sympa@inria.fr?subject=subscribe powerapi">mailing list</a>.
 
 ## Publications
 * **[Process-level Power Estimation in VM-based Systems](https://hal.inria.fr/hal-01130030)**: M. Colmant, M. Kurpicz, L. Huertas, R. Rouvoy, P. Felber, A. Sobe. *European Conference on Computer Systems* (EuroSys). April 2015, Bordeaux, France. pp.1-14. To appear.
