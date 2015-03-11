@@ -34,7 +34,7 @@ import org.powerapi.core.ClockChannel.ClockTick
 import org.powerapi.core.MessageBus
 import org.powerapi.core.power._
 import org.powerapi.core.target._
-import org.powerapi.module.PowerChannel.{PowerReport, subscribePowerReport}
+import org.powerapi.module.PowerChannel.{RawPowerReport, subscribeRawPowerReport}
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
@@ -54,11 +54,11 @@ class VirtioFormulaSuite(system: ActorSystem) extends TestKit(system) with Impli
   "A VirtioFormula" should "compute the power when a VirtioReport is received" in new Bus {
     val formula = TestActorRef(Props(classOf[VirtioFormula], eventBus))(system)
     val muid = UUID.randomUUID()
-    subscribePowerReport(muid)(eventBus)(testActor)
+    subscribeRawPowerReport(muid)(eventBus)(testActor)
 
     publishVirtioReport(muid, 1, 30.W, TargetUsageRatio(0.5), ClockTick("", 25.milliseconds))(eventBus)
-    expectMsgClass(classOf[PowerReport]) match {
-      case report: PowerReport => report.muid should equal(muid); report.device should equal("cpu"); report.target should equal(Process(1)); report.power should equal(15.W)
+    expectMsgClass(classOf[RawPowerReport]) match {
+      case report: RawPowerReport => report.muid should equal(muid); report.device should equal("cpu"); report.target should equal(Process(1)); report.power should equal(15.W)
     }
 
     Await.result(gracefulStop(formula, timeout.duration), timeout.duration)

@@ -25,7 +25,7 @@ package org.powerapi.bitwatts.module.virtio
 import org.powerapi.bitwatts.module.virtio.VirtioChannel.{subscribeVirtioReport, VirtioReport}
 import org.powerapi.core.MessageBus
 import org.powerapi.module.FormulaComponent
-import org.powerapi.module.PowerChannel.publishPowerReport
+import org.powerapi.module.PowerChannel.publishRawPowerReport
 
 /**
  * Uses VirtioReport to compute the target powers.
@@ -42,6 +42,6 @@ class VirtioFormula(eventBus: MessageBus) extends FormulaComponent[VirtioReport]
     log.debug("utilization: {}", s"${sensorReport.targetRatio}")
 
     lazy val power = sensorReport.power * sensorReport.targetRatio.ratio
-    publishPowerReport(sensorReport.muid, sensorReport.target, power, "cpu", sensorReport.tick)(eventBus)
+    publishRawPowerReport(sensorReport.muid, sensorReport.target, power, "cpu", sensorReport.tick)(eventBus)
   }
 }

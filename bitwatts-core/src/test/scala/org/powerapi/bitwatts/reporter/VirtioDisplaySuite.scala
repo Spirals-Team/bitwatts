@@ -35,22 +35,18 @@ class VirtioDisplaySuite extends UnitTest with MockFactory {
     val socketMock = mock[Socket]
     val output = new ByteArrayOutputStream()
 
-    val display = new VirtioDisplay(Map(1 -> 1)) {
+    val display = new VirtioDisplay(1) {
       override def initializeConnection(prefixPath: String, port: Int): Option[Socket] = {
         Some(socketMock)
       }
     }
 
-    display.display(System.currentTimeMillis, "firefox", "cpu", 10.W)
-    display.sockets shouldBe empty
-    new String(output.toByteArray) should equal("")
-    display.display(System.currentTimeMillis, 2, "cpu", 10.W)
-    display.sockets shouldBe empty
+    display.display(System.currentTimeMillis, Set(1), Set("cpu"), 10.W)
     new String(output.toByteArray) should equal("")
 
     socketMock.getOutputStream _ expects() returning output
 
-    display.display(System.currentTimeMillis, 1, "cpu", 10.W)
+    display.display(System.currentTimeMillis, Set(1), Set("cpu"), 10.W)
     new String(output.toByteArray) should equal(s"${10.W.toWatts}\n")
   }
 }

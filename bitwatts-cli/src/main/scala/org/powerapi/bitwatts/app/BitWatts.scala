@@ -26,7 +26,7 @@ import java.lang.management.ManagementFactory
 
 import org.powerapi.bitwatts.reporter.VirtioDisplay
 import org.powerapi.core.target.{Application, All, Process, Target}
-import org.powerapi.reporter.{JFreeChartDisplay, ConsoleDisplay}
+import org.powerapi.reporter.{FileDisplay, JFreeChartDisplay, ConsoleDisplay}
 import org.powerapi.{PowerMonitoring, PowerMeter, PowerModule}
 import org.powerapi.bitwatts.module.virtio.VirtioModule
 import org.powerapi.core.power._
@@ -36,11 +36,6 @@ import org.powerapi.module.libpfm.{LibpfmHelper, LibpfmCoreProcessModule, Libpfm
 import org.powerapi.module.powerspy.PowerSpyModule
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.stringSeqToProcess
-import scalax.io.Resource
-
-class FileDisplay(filepath: String) extends org.powerapi.reporter.FileDisplay {
-  override lazy val output = Resource.fromFile(filepath)
-}
 
 /**
  * BitWatts CLI.
@@ -50,17 +45,13 @@ class FileDisplay(filepath: String) extends org.powerapi.reporter.FileDisplay {
 object BitWatts extends App {
   val modulesR = """(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|virtio)(,(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|virtio))*""".r
   val aggR = """max|min|geomean|logsum|mean|median|stdev|sum|variance""".r
-  val durationR = """\d+""".r
-  val virtioR = """([0-9]+:[0-9]+)(,([0-9]+:[0-9]+))*""".r
-  val pidR = """(\d+)""".r
+  val numbersR = """(\d+)""".r
   val appR = """(.+)""".r
 
   @volatile var powerMeters = Seq[PowerMeter]()
   @volatile var monitors = Seq[PowerMonitoring]()
 
   val shutdownHookThread = scala.sys.ShutdownHookThread {
-    println("It's the time for sleeping! ...")
-
     monitors.foreach(monitor => monitor.cancel())
     monitors = Seq()
     powerMeters.foreach(powerMeter => powerMeter.shutdown())
@@ -105,23 +96,13 @@ object BitWatts extends App {
   }
 
   def validateDuration(str: String): Boolean = str match {
-    case durationR(_*) => true
+    case numbersR(_*) => true
     case _ => false
   }
 
   def validateVirtio(str: String): Boolean = str match {
-    case virtioR(_*) => true
+    case numbersR(_*) => true
     case _ => false
-  }
-
-  implicit def virtioStrToMapping(str: String): Map[Int, Int] = {
-    var mappings = Map[Int, Int]()
-
-    for(mapping <- str.split(",")) {
-      mappings += mapping.split(":")(0).toInt -> mapping.split(":")(1).toInt
-    }
-
-    mappings
   }
 
   implicit def targetsStrToTargets(str: String): Seq[Target] = {
@@ -134,7 +115,7 @@ object BitWatts extends App {
       target match {
         case "" => Process(ManagementFactory.getRuntimeMXBean.getName.split("@")(0).toInt)
         case "all" => All
-        case pidR(pid) => Process(pid.toInt)
+        case numbersR(pid) => Process(pid.toInt)
         case appR(app) => Application(app)
       }
     }).toSeq
@@ -143,17 +124,18 @@ object BitWatts extends App {
   def printHelp(): Unit = {
     val str =
       """
-        |BitWatts (c) Spirals Team / University of Neuchatel"
+        |BitWatts Spirals Team / University of Neuchatel"
         |
         |Build a software-defined power meter. Don't forget to configure correctly the modules (see the documentation).
         |
-        |usage: ./bitwatts-cli modules [cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-proces|powerspy|virtio, ...]
-        |                              monitor --frequency [ms] --targets [pid, ..., app, ...)|all] --agg [max|min|geomean|logsum|mean|median|stdev|sum|variance] --[console,file [filepath],chart,virtio [pid:port, ...]]
-        |                      duration [s]
+        |usage: ./bitwatts modules [cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|virtio, ...] \
+        |                          monitor --frequency [ms] --targets [pid, ..., app, ...)|all] --agg [max|min|geomean|logsum|mean|median|stdev|sum|variance] --[console,file [filepath],chart,virtio [port], ...]] \
+        |                  duration [s]
         |
-        |example: ./bitwatts-cli modules cpu-simple monitor --frequency 1000 --targets firefox --agg max --console monitor --targets chrome --agg max --console
-        |                        modules powerspy monitor --frequency 1000 --targets all -agg max --console
-        |                        duration 30
+        |example: ./bitwatts modules libpfm-core-process monitor --frequency 1000 --targets 2355 --agg max --virtio 2 \
+        |                                                monitor --frequency 1000 --targets 2356 --agg max --virtio 3 \
+        |                    modules powerspy monitor --frequency 1000 --targets all --agg max --file output-powers.dat \
+        |                    duration 30
       """.stripMargin
 
     println(str)
@@ -228,7 +210,7 @@ object BitWatts extends App {
         }
 
         if(virtio != "") {
-          val virtioDisplay = new VirtioDisplay(virtio)
+          val virtioDisplay = new VirtioDisplay(virtio.toInt)
           monitor.to(virtioDisplay)
         }
       }

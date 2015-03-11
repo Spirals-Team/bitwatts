@@ -33,15 +33,13 @@ import org.powerapi.core.target.{Process, Target}
 
 /**
  * This display is used to report data inside a JUnixSocket.
- * It works only if with Process targets because of one VM is associated to one port.
  *
  * @author <a href="mailto:maxime.colmant@gmail.com">Maxime Colmant</a>
  * @author <a href="mailto:mascha.kurpicz@unine.ch">Mascha Kurpicz</a>
  */
-class VirtioDisplay(mappings: Map[Int, Int]) extends PowerDisplay with VirtioDisplayConfiguration {
+class VirtioDisplay(port: Int) extends PowerDisplay with VirtioDisplayConfiguration {
   private[this] val log = LogManager.getLogger
-
-  val sockets = scala.collection.mutable.Map[Process, Socket]()
+  private[this] var output: Option[Socket] = None
 
   def initializeConnection(prefixPath: String, port: Int): Option[Socket] = {
     try {
@@ -55,31 +53,36 @@ class VirtioDisplay(mappings: Map[Int, Int]) extends PowerDisplay with VirtioDis
     }
   }
 
-  def display(timestamp: Long, target: Target, device: String, power: Power): Unit = {
-    target match {
-      case process: Process => {
-        if(!sockets.contains(process) && mappings.contains(process.pid)) {
-          val port = mappings(process.pid)
-          log.debug("pid: {}, port: {}", s"${process.pid}", s"$port")
+  def initOutput(): Unit = {
+    if(output == None) {
+      log.debug("socket opened on port: {}", s"$port")
+      initializeConnection(virtioPathPrefix, port) match {
+        case option: Option[Socket] => output = option
+        case _ => {}
+      }
+    }
+  }
 
-          initializeConnection(virtioPathPrefix, port) match {
-            case Some(socket) => sockets += process -> socket
-            case _ => {}
-          }
+  def writePower(targets: Set[Target], power: Power): Unit = {
+    output match {
+      case Some(socket) => {
+        try {
+          log.debug(s"{} has been written on port {} for targets {}", s"${power.toWatts}", s"$port", s"${targets.mkString(",")}")
+          socket.getOutputStream.write(s"${power.toWatts}\n".getBytes)
         }
-
-        if(sockets.contains(process)) {
-          try {
-            log.debug(s"${power.toWatts}")
-            val output = sockets(process.pid).getOutputStream
-            output.write(s"${power.toWatts}\n".getBytes)
-          }
-          catch {
-            case _: Throwable => log.warn("Connexion lost for the pid: {}", s"${process.pid}"); sockets -= process
+        catch {
+          case _: Throwable => {
+            log.warn("Connexion lost on port {}", s"$port")
+            output = None
           }
         }
       }
       case _ => {}
     }
+  }
+
+  def display(timestamp: Long, targets: Set[Target], device: Set[String], power: Power): Unit = {
+    initOutput()
+    writePower(targets, power)
   }
 }

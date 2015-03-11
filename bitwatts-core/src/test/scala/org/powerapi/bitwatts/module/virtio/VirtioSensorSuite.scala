@@ -109,11 +109,11 @@ class VirtioSensorSuite(system: ActorSystem) extends TestKit(system) with Implic
         (globalElapsedTime1, activeElapsedTime1), (globalElapsedTime2, activeElapsedTime2), (globalElapsedTime2, activeElapsedTime2), (globalElapsedTime3, activeElapsedTime3)
       )
 
-      def getCPUFrequencies(topology: Map[Int, Iterable[Int]]): Iterable[Long] = Iterable()
+      def getCPUFrequencies: Set[Long] = Set()
 
-      def getProcesses(application: Application): Iterable[Process] = Iterable(Process(2), Process(3))
+      def getProcesses(application: Application): Set[Process] = Set(Process(2), Process(3))
 
-      def getThreads(process: Process): Iterable[Thread] = Iterable()
+      def getThreads(process: Process): Set[Thread] = Set()
 
       def getProcessCpuTime(process: Process): Option[Long] = {
         targetTimes.getOrElse(process, List()) match {
@@ -175,12 +175,12 @@ class VirtioSensorSuite(system: ActorSystem) extends TestKit(system) with Implic
     lazy val tick5 = ClockTick("", 25.milliseconds)
 
     val sensor = TestActorRef(Props(classOf[VirtioSensorMock], eventBus, new OSHelper {
-      def getCPUFrequencies(topology: Map[Int, Iterable[Int]]): Iterable[Long] = ???
-      def getThreads(process: Process): Iterable[Thread] = ???
+      def getCPUFrequencies: Set[Long] = ???
+      def getThreads(process: Process): Set[Thread] = ???
       def getTimeInStates: TimeInStates = ???
       def getProcessCpuTime(process: Process): Option[Long] = ???
       def getGlobalCpuTime: GlobalCpuTime = ???
-      def getProcesses(application: Application): Iterable[Process] = ???
+      def getProcesses(application: Application): Set[Process] = ???
     }, 0, bufferMock), "virtio-sensor1")(system)
 
     bufferMock.readLine _ expects() returning "120"
@@ -227,11 +227,11 @@ class VirtioSensorSuite(system: ActorSystem) extends TestKit(system) with Implic
         (oldGlobalElapsedTime1, oldActiveElapsedTime1), (globalElapsedTime1, activeElapsedTime1)
       )
 
-      def getCPUFrequencies(topology: Map[Int, Iterable[Int]]): Iterable[Long] = Iterable()
+      def getCPUFrequencies: Set[Long] = Set()
 
-      def getProcesses(application: Application): Iterable[Process] = Iterable(Process(2), Process(3))
+      def getProcesses(application: Application): Set[Process] = Set(Process(2), Process(3))
 
-      def getThreads(process: Process): Iterable[Thread] = Iterable()
+      def getThreads(process: Process): Set[Thread] = Set()
 
       def getProcessCpuTime(process: Process): Option[Long] = {
         targetTimes.getOrElse(process, List()) match {

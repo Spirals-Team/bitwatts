@@ -2,7 +2,7 @@ name := "bitwatts-core"
 
 // App
 libraryDependencies ++= Seq(
-  "org.powerapi" % "powerapi-core_2.11" % "3.0"
+  "org.powerapi" % "powerapi-core_2.11" % "3.1"
 )
 
 // Tests
