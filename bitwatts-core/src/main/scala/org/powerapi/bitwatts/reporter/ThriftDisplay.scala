@@ -22,18 +22,37 @@
  */
 package org.powerapi.bitwatts.reporter
 
-import org.powerapi.core.{ConfigValue, Configuration}
+import org.apache.thrift.TSerializer
+import org.apache.thrift.protocol.TBinaryProtocol
+import org.powerapi.PowerDisplay
+import org.powerapi.bitwatts.reporter.thrift.Message
+import org.powerapi.core.power.Power
+import org.powerapi.core.target.Target
+import org.zeromq.ZMQ
+import scala.collection.JavaConversions._
+
 
 /**
- * Main configuration.
+ * This display is used to report data into a ZeroMQ broker.
  *
  * @author <a href="mailto:maxime.colmant@gmail.com">Maxime Colmant</a>
  * @author <a href="mailto:mascha.kurpicz@unine.ch">Mascha Kurpicz</a>
  */
-trait VirtioDisplayConfiguration extends Configuration {
+class ThriftDisplay(ip: String, port: Int, sender: String, topic: String) extends PowerDisplay {
 
-  lazy val virtioPathPrefix = load { _.getString("powerapi.virtio.host-path.prefix") } match {
-    case ConfigValue(path) => path
-    case _ => "/tmp/"
+  val context = ZMQ.context(1)
+  val publisher = context.socket(ZMQ.PUB)
+  publisher.connect(s"tcp://$ip:$port")
+  val serializer = new TSerializer(new TBinaryProtocol.Factory())
+
+  var interval = 0
+
+  def display(timestamp: Long, targets: Set[Target], devices: Set[String], power: Power): Unit = {
+    val data: java.util.Map[String, String] = Map("power" -> s"${power.toWatts}", "type" -> "bitwatts", "interval_index" -> s"$interval")
+    val message = serializer.serialize(new Message(data))
+    publisher.sendMore(topic)
+    publisher.sendMore(sender)
+    publisher.send(message, 0)
+    interval += 1
   }
 }

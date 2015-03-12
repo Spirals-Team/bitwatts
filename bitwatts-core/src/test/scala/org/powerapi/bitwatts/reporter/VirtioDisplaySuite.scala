@@ -35,8 +35,8 @@ class VirtioDisplaySuite extends UnitTest with MockFactory {
     val socketMock = mock[Socket]
     val output = new ByteArrayOutputStream()
 
-    val display = new VirtioDisplay(1) {
-      override def initializeConnection(prefixPath: String, port: Int): Option[Socket] = {
+    val display = new VirtioDisplay("") {
+      override def initializeConnection(): Option[Socket] = {
         Some(socketMock)
       }
     }

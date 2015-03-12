@@ -24,7 +24,7 @@ package org.powerapi.bitwatts.app
 
 import java.lang.management.ManagementFactory
 
-import org.powerapi.bitwatts.reporter.VirtioDisplay
+import org.powerapi.bitwatts.reporter.{ThriftDisplay, VirtioDisplay}
 import org.powerapi.core.target.{Application, All, Process, Target}
 import org.powerapi.reporter.{FileDisplay, JFreeChartDisplay, ConsoleDisplay}
 import org.powerapi.{PowerMonitoring, PowerMeter, PowerModule}
@@ -47,6 +47,7 @@ object BitWatts extends App {
   val aggR = """max|min|geomean|logsum|mean|median|stdev|sum|variance""".r
   val numbersR = """(\d+)""".r
   val appR = """(.+)""".r
+  val thriftR = """(.+),([0-9]+),(.+),(.+)""".r
 
   @volatile var powerMeters = Seq[PowerMeter]()
   @volatile var monitors = Seq[PowerMonitoring]()
@@ -100,11 +101,6 @@ object BitWatts extends App {
     case _ => false
   }
 
-  def validateVirtio(str: String): Boolean = str match {
-    case numbersR(_*) => true
-    case _ => false
-  }
-
   implicit def targetsStrToTargets(str: String): Seq[Target] = {
     val strTargets = if(str.split(",").contains("all")) {
       "all"
@@ -121,19 +117,24 @@ object BitWatts extends App {
     }).toSeq
   }
 
+  def validateThrift(str: String): Boolean = str match {
+    case thriftR(_*) => true
+    case _ => false
+  }
+
   def printHelp(): Unit = {
     val str =
       """
         |BitWatts Spirals Team / University of Neuchatel"
         |
-        |Build a software-defined power meter. Don't forget to configure correctly the modules (see the documentation).
+        |Build a software-defined power meter. Do not forget to configure correctly the modules (see the documentation).
         |
         |usage: ./bitwatts modules [cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|virtio, ...] \
-        |                          monitor --frequency [ms] --targets [pid, ..., app, ...)|all] --agg [max|min|geomean|logsum|mean|median|stdev|sum|variance] --[console,file [filepath],chart,virtio [port], ...]] \
+        |                          monitor --frequency [ms] --targets [pid, ..., app, ...)|all] --agg [max|min|geomean|logsum|mean|median|stdev|sum|variance] --[console,file [filepath],chart,virtio [filepath], thrift [ip,port,sender,topic] ...]] \
         |                  duration [s]
         |
-        |example: ./bitwatts modules libpfm-core-process monitor --frequency 1000 --targets 2355 --agg max --virtio 2 \
-        |                                                monitor --frequency 1000 --targets 2356 --agg max --virtio 3 \
+        |example: ./bitwatts modules libpfm-core-process monitor --frequency 1000 --targets 2355 --agg max --virtio /tmp/port2 \
+        |                                                monitor --frequency 1000 --targets 2356 --agg max --virtio /tmp/port3 --thrift 193.51.236.198,5556,topic,bitwatts \
         |                    modules powerspy monitor --frequency 1000 --targets all --agg max --file output-powers.dat \
         |                    duration 30
       """.stripMargin
@@ -162,7 +163,8 @@ object BitWatts extends App {
     case "--console" :: tail => cliMonitorsSubcommand(options, currentMonitor ++ Map('console -> "true"), tail)
     case "--file" :: value :: tail => cliMonitorsSubcommand(options, currentMonitor ++ Map('file -> value), tail)
     case "--chart" :: tail => cliMonitorsSubcommand(options, currentMonitor ++ Map('chart -> "true"), tail)
-    case "--virtio" :: value :: tail if validateVirtio(value) => cliMonitorsSubcommand(options, currentMonitor ++ Map('virtio -> value), tail)
+    case "--virtio" :: value :: tail => cliMonitorsSubcommand(options, currentMonitor ++ Map('virtio -> value), tail)
+    case "--thrift" :: value :: tail if validateThrift(value) => cliMonitorsSubcommand(options, currentMonitor ++ Map('thrift -> value), tail)
     case option :: tail => println(s"unknown monitor option $option"); sys.exit(1)
   }
 
@@ -190,6 +192,7 @@ object BitWatts extends App {
         val file = monitorConf.getOrElse('file, "").toString
         val chart = monitorConf.getOrElse('chart, "").toString
         val virtio = monitorConf.getOrElse('virtio, "").toString
+        val thrift = monitorConf.getOrElse('thrift, "").toString
 
         val monitor = powerMeter.monitor(frequency)(targets: _*)(agg)
         monitors :+= monitor
@@ -210,8 +213,14 @@ object BitWatts extends App {
         }
 
         if(virtio != "") {
-          val virtioDisplay = new VirtioDisplay(virtio.toInt)
+          val virtioDisplay = new VirtioDisplay(virtio)
           monitor.to(virtioDisplay)
+        }
+
+        if(thrift != "") {
+          val thriftParams = thrift.split(",")
+          val thriftDisplay = new ThriftDisplay(thriftParams(0), thriftParams(1).toInt, thriftParams(2), thriftParams(3))
+          monitor.to(thriftDisplay)
         }
       }
     }

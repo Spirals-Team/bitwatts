@@ -37,27 +37,29 @@ import org.powerapi.core.target.{Process, Target}
  * @author <a href="mailto:maxime.colmant@gmail.com">Maxime Colmant</a>
  * @author <a href="mailto:mascha.kurpicz@unine.ch">Mascha Kurpicz</a>
  */
-class VirtioDisplay(port: Int) extends PowerDisplay with VirtioDisplayConfiguration {
+class VirtioDisplay(path: String) extends PowerDisplay {
   private[this] val log = LogManager.getLogger
   private[this] var output: Option[Socket] = None
 
-  def initializeConnection(prefixPath: String, port: Int): Option[Socket] = {
+  def initializeConnection(): Option[Socket] = {
     try {
       val sock = AFUNIXSocket.newInstance()
-      val address = new AFUNIXSocketAddress(new File(s"${virtioPathPrefix}port$port"))
+      val address = new AFUNIXSocketAddress(new File(path))
       sock.connect(address)
       Some(sock)
     }
     catch {
-      case _: Throwable => log.warn("Connexion impossible for the port: {}", s"$port"); None
+      case _: Throwable => log.warn("Connexion impossible, path: {}", path); None
     }
   }
 
   def initOutput(): Unit = {
     if(output == None) {
-      log.debug("socket opened on port: {}", s"$port")
-      initializeConnection(virtioPathPrefix, port) match {
-        case option: Option[Socket] => output = option
+      initializeConnection() match {
+        case option: Option[Socket] => {
+          log.debug("socket opened, path {}", path)
+          output = option
+        }
         case _ => {}
       }
     }
@@ -67,12 +69,12 @@ class VirtioDisplay(port: Int) extends PowerDisplay with VirtioDisplayConfigurat
     output match {
       case Some(socket) => {
         try {
-          log.debug(s"{} has been written on port {} for targets {}", s"${power.toWatts}", s"$port", s"${targets.mkString(",")}")
+          log.debug(s"{} has been written for targets {} in {}", s"${power.toWatts}", s"${targets.mkString(",")}", path)
           socket.getOutputStream.write(s"${power.toWatts}\n".getBytes)
         }
         catch {
           case _: Throwable => {
-            log.warn("Connexion lost on port {}", s"$port")
+            log.warn("Connexion lost, path {}", path)
             output = None
           }
         }
