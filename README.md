@@ -12,6 +12,8 @@ The research leading to these results has received funding from the European Com
 
 This project is fully managed with [sbt](http://www.scala-sbt.org/).
 
+The documentation is available [here](https://github.com/Spirals-Team/bitwatts/wiki).
+
 ## Mailing list
 You can follow the latest news and asks questions by subscribing to our <a href="mailto:sympa@inria.fr?subject=subscribe powerapi">mailing list</a>.
 
