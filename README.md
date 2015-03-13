@@ -29,6 +29,8 @@ When submitting code, please make every effort to follow existing conventions an
 We all stand on the shoulders of giants and get by with a little help from our friends. BitWatts is written in [Scala](http://www.scala-lang.org) (version 2.11.4 under [3-clause BSD license](http://www.scala-lang.org/license.html)) and built on top of:
 * [PowerAPI](https://github.com/Spirals-Team/powerapi) (version 3.0 under [AGPL license](http://www.gnu.org/licenses/agpl-3.0.html)), for using a software-defined power meter
 * [JUnixSocket](https://code.google.com/p/junixsocket/) (version 1.3 under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0)), for using unix domain sockets (quick time accesses)
+* [Apache Thrift](https://thrift.apache.org/) (version 0.9.2 under [Apache 2 license](http://www.apache.org/licenses/LICENSE-2.0)), for scalable cross-language services
+* [JeroMQ](https://github.com/zeromq/jeromq) (version 0.3.4 under [LGPL3 license](https://github.com/zeromq/jeromq/blob/master/COPYING.LESSER)), for using libzmq in native java.
 
 # License
 This software is licensed under the *GNU Affero General Public License*, quoted below.
