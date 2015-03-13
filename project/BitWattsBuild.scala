@@ -6,4 +6,5 @@ object BitWattsBuild extends Build {
 
   lazy val bitwattsCore = Project(id = "bitwatts-core", base = file("bitwatts-core"))
   lazy val bitwattsCli = Project(id = "bitwatts-cli", base = file("bitwatts-cli")).dependsOn(bitwattsCore % "compile -> compile").enablePlugins(JavaAppPackaging)
+  lazy val bitwattsEurosys2015 = Project(id = "bitwatts-eurosys-2015", base = file("bitwatts-eurosys-2015")).dependsOn(bitwattsCore % "compile -> compile").enablePlugins(JavaAppPackaging)
 }
