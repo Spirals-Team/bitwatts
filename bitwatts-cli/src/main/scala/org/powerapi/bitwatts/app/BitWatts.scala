@@ -26,6 +26,7 @@ import java.lang.management.ManagementFactory
 
 import org.powerapi.bitwatts.reporter.{ThriftDisplay, VirtioDisplay}
 import org.powerapi.core.target.{Application, All, Process, Target}
+import org.powerapi.module.rapl.RAPLModule
 import org.powerapi.reporter.{FileDisplay, JFreeChartDisplay, ConsoleDisplay}
 import org.powerapi.{PowerMonitoring, PowerMeter, PowerModule}
 import org.powerapi.bitwatts.module.virtio.VirtioModule
@@ -43,7 +44,7 @@ import scala.sys.process.stringSeqToProcess
  * @author <a href="mailto:maxime.colmant@gmail.com">Maxime Colmant</a>
  */
 object BitWatts extends App {
-  val modulesR = """(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|virtio)(,(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|virtio))*""".r
+  val modulesR = """(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio)(,(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio))*""".r
   val aggR = """max|min|geomean|logsum|mean|median|stdev|sum|variance""".r
   val numbersR = """(\d+)""".r
   val appR = """(.+)""".r
@@ -72,6 +73,7 @@ object BitWatts extends App {
         case "libpfm-core" => LibpfmCoreModule()
         case "libpfm-core-process" => LibpfmCoreProcessModule()
         case "powerspy" => PowerSpyModule()
+        case "rapl" => RAPLModule()
         case "virtio" => VirtioModule()
       }
     }).toSeq
@@ -129,7 +131,7 @@ object BitWatts extends App {
         |
         |Build a software-defined power meter. Do not forget to configure correctly the modules (see the documentation).
         |
-        |usage: ./bitwatts modules [cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|virtio, ...] \
+        |usage: ./bitwatts modules [cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio, ...] \
         |                          monitor --frequency [ms] --targets [pid, ..., app, ...)|all] --agg [max|min|geomean|logsum|mean|median|stdev|sum|variance] --[console,file [filepath],chart,virtio [filepath], thrift [ip,port,sender,topic] ...]] \
         |                  duration [s]
         |
@@ -181,7 +183,7 @@ object BitWatts extends App {
       val modules = powerMeterConf('modules).toString
       if(modules.contains("libpfm-core") || modules.contains("libpfm-core-process")) LibpfmHelper.init()
 
-      val powerMeter = PowerMeter.loadModule(powerMeterConf('modules).toString: _*)
+      val powerMeter = PowerMeter.loadModule(modules: _*)
       powerMeters :+= powerMeter
 
       for(monitorConf <- powerMeterConf('monitors).asInstanceOf[List[Map[Symbol, Any]]]) {
