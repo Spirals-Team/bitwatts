@@ -39,7 +39,7 @@ import scalax.file.Path
  *
  * @author <a href="mailto:maxime.colmant@gmail.com">Maxime Colmant</a>
  */
-object BitWatts extends App with Configuration {
+object BitWatts extends Configuration(None) with App {
   /**
    * Main configuration.
    */
@@ -67,12 +67,15 @@ object BitWatts extends App with Configuration {
   lazy val PSFormat = """\s*([\d]+)\s.*""".r
 
   val currentPid = java.lang.management.ManagementFactory.getRuntimeMXBean.getName.split("@")(0).toInt
+  val libpfmHelper = new LibpfmHelper
+  libpfmHelper.init()
 
   @volatile var powerMeters = Seq[PowerMeter]()
 
   val shutdownHookThread = scala.sys.ShutdownHookThread {
     powerMeters.foreach(powerMeter => powerMeter.shutdown())
     powerMeters = Seq()
+    libpfmHelper.deinit()
   }
 
   def figure9Experiment(): Unit = {
@@ -93,9 +96,7 @@ object BitWatts extends App with Configuration {
       }
     }
 
-    LibpfmHelper.init()
-
-    val powerapi = PowerMeter.loadModule(LibpfmCoreModule())
+    val powerapi = PowerMeter.loadModule(LibpfmCoreModule(None, libpfmHelper))
     powerMeters :+= powerapi
     val externalPMeter = PowerMeter.loadModule(PowerSpyModule())
     powerMeters :+= externalPMeter
@@ -153,7 +154,6 @@ object BitWatts extends App with Configuration {
 
     externalPMeter.shutdown()
     powerapi.shutdown()
-    LibpfmHelper.deinit()
     powerMeters = Seq()
   }
 
@@ -178,9 +178,7 @@ object BitWatts extends App with Configuration {
       }
     }
 
-    LibpfmHelper.init()
-
-    val powerapi = PowerMeter.loadModule(LibpfmCoreProcessModule())
+    val powerapi = PowerMeter.loadModule(LibpfmCoreProcessModule(None, libpfmHelper))
     powerMeters :+= powerapi
     val externalPMeter = PowerMeter.loadModule(PowerSpyModule())
     powerMeters :+= externalPMeter
@@ -257,14 +255,13 @@ object BitWatts extends App with Configuration {
       path.moveTo(Path(s"$figure10P/${path.name}", '/'), true)
     })
 
-    LibpfmHelper.deinit()
     powerMeters = List()
   }
 
   def printHelp(): Unit = {
     val str =
       """
-        |BitWatts Spirals Team / University of Neuchatel"
+        |BitWatts Spirals Team / University of Neuchâtel"
         |
         |EuroSys host experiments.
         |
