@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -22,12 +23,15 @@
  */
 package org.powerapi.bitwatts
 
+import java.util.UUID
+
 import akka.actor.{Props, ActorSystem}
 import akka.testkit.{TestActorRef, ImplicitSender, TestKit}
 import akka.util.Timeout
 import org.powerapi.bitwatts.module.virtio.VirtioModule
 import org.powerapi.PowerMeterActor
-import org.powerapi.core.MessageBus
+import org.powerapi.core.{GlobalCpuTime, TimeInStates, OSHelper, MessageBus, Thread}
+import org.powerapi.core.target.{TargetUsageRatio, Process, Application}
 import scala.concurrent.duration.DurationInt
 
 class PowerMeterSuite(system: ActorSystem) extends TestKit(system) with ImplicitSender with UnitTest {
@@ -43,7 +47,17 @@ class PowerMeterSuite(system: ActorSystem) extends TestKit(system) with Implicit
   }
 
   "The PowerMeter actor" should "load the VirtioModule" in new EventBus {
-    val actor = TestActorRef(Props(classOf[PowerMeterActor], eventBus, Seq(VirtioModule()), Timeout(1.seconds)))(system)
+    val osHelper = new OSHelper {
+      override def getThreads(process: Process): Set[Thread] = Set()
+      override def getTimeInStates: TimeInStates = TimeInStates(Map())
+      override def getGlobalCpuPercent(muid: UUID): TargetUsageRatio = TargetUsageRatio(0.0)
+      override def getCPUFrequencies: Set[Long] = Set()
+      override def getProcessCpuPercent(muid: UUID, process: Process): TargetUsageRatio = TargetUsageRatio(0.0)
+      override def getProcessCpuTime(process: Process): Option[Long] = None
+      override def getGlobalCpuTime: GlobalCpuTime = GlobalCpuTime(0l, 0l)
+      override def getProcesses(application: Application): Set[Process] = Set()
+    }
+    val actor = TestActorRef(Props(classOf[PowerMeterActor], eventBus, Seq(VirtioModule(None, osHelper)), Timeout(1.seconds)))(system)
     actor.children.size should equal(4)
   }
 }

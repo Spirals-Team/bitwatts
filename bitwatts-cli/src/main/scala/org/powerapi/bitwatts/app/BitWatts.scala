@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -25,14 +26,15 @@ package org.powerapi.bitwatts.app
 import java.lang.management.ManagementFactory
 
 import org.powerapi.bitwatts.reporter.{ThriftDisplay, VirtioDisplay}
+import org.powerapi.core.LinuxHelper
 import org.powerapi.core.target.{Application, All, Process, Target}
 import org.powerapi.module.rapl.RAPLModule
 import org.powerapi.reporter.{FileDisplay, JFreeChartDisplay, ConsoleDisplay}
-import org.powerapi.{PowerMonitoring, PowerMeter, PowerModule}
+import org.powerapi.{PowerMonitoring, PowerMeter}
 import org.powerapi.bitwatts.module.virtio.VirtioModule
 import org.powerapi.core.power._
 import org.powerapi.module.cpu.dvfs.CpuDvfsModule
-import org.powerapi.module.cpu.simple.CpuSimpleModule
+import org.powerapi.module.cpu.simple.{ProcFSCpuSimpleModule, SigarCpuSimpleModule}
 import org.powerapi.module.libpfm.{LibpfmHelper, LibpfmCoreProcessModule, LibpfmCoreModule}
 import org.powerapi.module.powerspy.PowerSpyModule
 import scala.concurrent.duration.DurationInt
@@ -44,9 +46,10 @@ import scala.sys.process.stringSeqToProcess
  * @author <a href="mailto:maxime.colmant@gmail.com">Maxime Colmant</a>
  */
 object BitWatts extends App {
-  val modulesR = """(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio)(,(cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio))*""".r
+  val modulesR = """(procfs-cpu-simple|sigar-cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio)(,(procfs-cpu-simple|sigar-cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio))*""".r
   val aggR = """max|min|geomean|logsum|mean|median|stdev|sum|variance""".r
-  val numbersR = """(\d+)""".r
+  val durationR = """\d+""".r
+  val pidR = """(\d+)""".r
   val appR = """(.+)""".r
   val thriftR = """(.+),([0-9]+),(.+),(.+)""".r
 
@@ -63,20 +66,6 @@ object BitWatts extends App {
   def validateModules(str: String) = str match {
     case modulesR(_*) => true
     case _ => false
-  }
-
-  implicit def modulesStrToPowerModules(str: String): Seq[PowerModule] = {
-    (for(module <- str.split(",")) yield {
-      module match {
-        case "cpu-simple" => CpuSimpleModule()
-        case "cpu-dvfs" => CpuDvfsModule()
-        case "libpfm-core" => LibpfmCoreModule()
-        case "libpfm-core-process" => LibpfmCoreProcessModule()
-        case "powerspy" => PowerSpyModule()
-        case "rapl" => RAPLModule()
-        case "virtio" => VirtioModule()
-      }
-    }).toSeq
   }
 
   def validateAgg(str: String): Boolean = str match {
@@ -99,7 +88,7 @@ object BitWatts extends App {
   }
 
   def validateDuration(str: String): Boolean = str match {
-    case numbersR(_*) => true
+    case durationR(_*) => true
     case _ => false
   }
 
@@ -113,7 +102,7 @@ object BitWatts extends App {
       target match {
         case "" => Process(ManagementFactory.getRuntimeMXBean.getName.split("@")(0).toInt)
         case "all" => All
-        case numbersR(pid) => Process(pid.toInt)
+        case pidR(pid) => Process(pid.toInt)
         case appR(app) => Application(app)
       }
     }).toSeq
@@ -127,12 +116,14 @@ object BitWatts extends App {
   def printHelp(): Unit = {
     val str =
       """
-        |BitWatts Spirals Team / University of Neuchatel"
+        |BitWatts, Spirals Team / University of Neuchatel"
         |
-        |Build a software-defined power meter. Do not forget to configure correctly the modules (see the documentation).
+        |Build a software-defined power meter. Do not forget to configure correctly the modules.
+        |You can use different settings per software-defined power meter for some modules by using the optional prefix option.
+        |Please, refer to the documentation inside the GitHub wiki for further details.
         |
-        |usage: ./bitwatts modules [cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-process|powerspy|rapl|virtio, ...] \
-        |                          monitor --frequency [ms] --targets [pid, ..., app, ...)|all] --agg [max|min|geomean|logsum|mean|median|stdev|sum|variance] --[console,file [filepath],chart,virtio [filepath], thrift [ip,port,sender,topic] ...]] \
+        |usage: ./bitwatts modules [procfs-cpu-simple|sigar-cpu-simple|cpu-dvfs|libpfm-core|libpfm-core-proces|powerspy|rapl|virtio,...] *--prefix [name]* \
+        |                          monitor --frequency [ms] --targets [pid, ..., app, ...|all] --agg [max|min|geomean|logsum|mean|median|stdev|sum|variance] --[console,file [filepath],chart,virtio [filepath],thrift [ip,port,sender,topic]] \
         |                  duration [s]
         |
         |example: ./bitwatts modules libpfm-core-process monitor --frequency 1000 --targets 2355 --agg max --virtio /tmp/port2 \
@@ -146,9 +137,13 @@ object BitWatts extends App {
 
   def cli(options: List[Map[Symbol, Any]], duration: String, args: List[String]): (List[Map[Symbol, Any]], String) = args match {
     case Nil => (options, duration)
+    case "modules" :: value :: "--prefix" :: prefix :: "monitor" :: tail if validateModules(value) => {
+      val (remainingArgs, monitors) = cliMonitorsSubcommand(List(), Map(), tail.map(_.toString))
+      cli(options :+ Map('modules -> value, 'prefix -> Some(prefix), 'monitors -> monitors), duration, remainingArgs)
+    }
     case "modules" :: value :: "monitor" :: tail if validateModules(value) => {
       val (remainingArgs, monitors) = cliMonitorsSubcommand(List(), Map(), tail.map(_.toString))
-      cli(options :+ Map('modules -> value, 'monitors -> monitors), duration, remainingArgs)
+      cli(options :+ Map('modules -> value, 'prefix -> None, 'monitors -> monitors), duration, remainingArgs)
     }
     case "duration" :: value :: tail if validateDuration(value) => cli(options, value, tail)
     case option :: tail => println(s"unknown cli option $option"); sys.exit(1)
@@ -156,6 +151,7 @@ object BitWatts extends App {
 
   def cliMonitorsSubcommand(options: List[Map[Symbol, Any]], currentMonitor: Map[Symbol, Any], args: List[String]): (List[String], List[Map[Symbol, Any]]) = args match {
     case Nil => (List(), options :+ currentMonitor)
+    case "modules" :: value :: "--prefix" :: prefix :: "monitor" :: tail if validateModules(value) => (List("modules", value, "--prefix", prefix, "monitor") ++ tail, options :+ currentMonitor)
     case "modules" :: value :: "monitor" :: tail if validateModules(value) => (List("modules", value, "monitor") ++ tail, options :+ currentMonitor)
     case "duration" :: value :: tail if validateDuration(value) => (List("duration", value) ++ tail, options :+ currentMonitor)
     case "monitor" :: tail => cliMonitorsSubcommand(options :+ currentMonitor, Map(), tail)
@@ -176,12 +172,31 @@ object BitWatts extends App {
   }
 
   else {
-    Seq("bash", "scripts/system.bash").!
+    if(System.getProperty("os.name").toLowerCase.indexOf("nix") >= 0 || System.getProperty("os.name").toLowerCase.indexOf("nux") >= 0) Seq("bash", "scripts/system.bash").!
     val (configuration, duration) = cli(List(), "3600", args.toList)
 
+    var libpfmHelper: Option[LibpfmHelper] = None
+    // Currently, our solution was only tested on Linux
+    val linuxHelper = new LinuxHelper
+
+    if(configuration.count(powerMeterConf => powerMeterConf('modules).toString.contains("libpfm")) != 0) {
+      libpfmHelper = Some(new LibpfmHelper)
+      libpfmHelper.get.init()
+    }
+
     for(powerMeterConf <- configuration) {
-      val modules = powerMeterConf('modules).toString
-      if(modules.contains("libpfm-core") || modules.contains("libpfm-core-process")) LibpfmHelper.init()
+      val modules = (for(module <- powerMeterConf('modules).toString.split(",")) yield {
+        module match {
+          case "procfs-cpu-simple" => ProcFSCpuSimpleModule()
+          case "sigar-cpu-simple" => SigarCpuSimpleModule()
+          case "cpu-dvfs" => CpuDvfsModule()
+          case "libpfm-core" => LibpfmCoreModule(powerMeterConf('prefix).asInstanceOf[Option[String]], libpfmHelper.get)
+          case "libpfm-core-process" => LibpfmCoreProcessModule(powerMeterConf('prefix).asInstanceOf[Option[String]], libpfmHelper.get)
+          case "powerspy" => PowerSpyModule()
+          case "rapl" => RAPLModule()
+          case "virtio" => VirtioModule(powerMeterConf('prefix).asInstanceOf[Option[String]], linuxHelper)
+        }
+      }).toSeq
 
       val powerMeter = PowerMeter.loadModule(modules: _*)
       powerMeters :+= powerMeter
@@ -229,8 +244,10 @@ object BitWatts extends App {
 
     Thread.sleep(duration.toInt.seconds.toMillis)
 
-    val isLibpfmInit = configuration.count(powerMeterConf => powerMeterConf('modules).toString.contains("libpfm-core") || powerMeterConf('modules).toString.contains("libpfm-core-process")) != 0
-    if(isLibpfmInit) LibpfmHelper.deinit()
+    libpfmHelper match {
+      case Some(helper) => helper.deinit()
+      case _ => {}
+    }
   }
 
   shutdownHookThread.start()

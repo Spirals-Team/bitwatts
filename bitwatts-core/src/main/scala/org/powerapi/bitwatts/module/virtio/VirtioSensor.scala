@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -27,7 +28,7 @@ import org.powerapi.bitwatts.module.virtio.VirtioChannel.publishVirtioReport
 import org.powerapi.core.MonitorChannel.MonitorTick
 import org.powerapi.core.power._
 import org.powerapi.core.target.{TargetUsageRatio, Application, All, Process}
-import org.powerapi.core.{GlobalCpuTime, OSHelper, MessageBus}
+import org.powerapi.core.{OSHelper, MessageBus}
 import org.powerapi.module.SensorChannel.{MonitorStop, MonitorStopAll}
 import org.powerapi.module.{CacheKey, Cache, SensorComponent}
 import scala.reflect.ClassTag
@@ -46,51 +47,21 @@ class VirtioSensor(eventBus: MessageBus, osHelper: OSHelper, port: Int) extends 
     case ex: Throwable => log.warning("i/o exception: {}", s"${ex.getMessage}"); None
   }
 
-  val cpuTimesCache = new Cache[(Long, Long)]
   val timestamps = new Cache[Long]
   val powers = new Cache[Power]
 
   val processClaz = implicitly[ClassTag[Process]].runtimeClass
   val appClaz = implicitly[ClassTag[Application]].runtimeClass
 
-  def targetUsageRatio(monitorTick: MonitorTick): TargetUsageRatio = {
-    val key = CacheKey(monitorTick.muid, monitorTick.target)
+  def targetCpuUsageRatio(monitorTick: MonitorTick): TargetUsageRatio = {
+    val processClaz = implicitly[ClassTag[Process]].runtimeClass
+    val appClaz = implicitly[ClassTag[Application]].runtimeClass
 
-    lazy val (_, activeCpuTime) = osHelper.getGlobalCpuTime match {
-      case GlobalCpuTime(globalTime, activeTime) => (globalTime, activeTime)
-    }
-
-    lazy val now = monitorTick.target match {
+    monitorTick.target match {
       case target if processClaz.isInstance(target) || appClaz.isInstance(target) => {
-        lazy val targetCpuTime = osHelper.getTargetCpuTime(target) match {
-          case Some(time) => time
-          case _ => 0l
-        }
-
-        (targetCpuTime, activeCpuTime)
+        osHelper.getTargetCpuPercent(monitorTick.muid, target)
       }
-      case All => (activeCpuTime, activeCpuTime)
-    }
-
-    val old = cpuTimesCache(key)(now)
-
-    val diffTimes = (now._1 - old._1, now._2 - old._2)
-
-    diffTimes match {
-      case diff: (Long, Long) => {
-        if(old == now) {
-          cpuTimesCache(key) = now
-          TargetUsageRatio(0.0)
-        }
-
-        else if (diff._1 > 0 && diff._2 > 0 && diff._1 <= diff._2) {
-          cpuTimesCache(key) = now
-          TargetUsageRatio(diff._1.toDouble / diff._2)
-        }
-
-        else TargetUsageRatio(0.0)
-      }
-      case _ => TargetUsageRatio(0.0)
+      case All => osHelper.getGlobalCpuPercent(monitorTick.muid)
     }
   }
 
@@ -119,17 +90,15 @@ class VirtioSensor(eventBus: MessageBus, osHelper: OSHelper, port: Int) extends 
   }
 
   def sense(monitorTick: MonitorTick): Unit = {
-    publishVirtioReport(monitorTick.muid, monitorTick.target, power(monitorTick), targetUsageRatio(monitorTick), monitorTick.tick)(eventBus)
+    publishVirtioReport(monitorTick.muid, monitorTick.target, power(monitorTick), targetCpuUsageRatio(monitorTick), monitorTick.tick)(eventBus)
   }
 
   def monitorStopped(msg: MonitorStop): Unit = {
-    cpuTimesCache -= msg.muid
     timestamps -= msg.muid
     powers -= msg.muid
   }
 
   def monitorAllStopped(msg: MonitorStopAll): Unit = {
-    cpuTimesCache.clear()
     timestamps.clear()
     powers.clear()
   }

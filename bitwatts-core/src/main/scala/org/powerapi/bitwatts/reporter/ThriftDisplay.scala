@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -22,6 +23,7 @@
  */
 package org.powerapi.bitwatts.reporter
 
+import java.util.UUID
 import org.apache.thrift.TSerializer
 import org.apache.thrift.protocol.TBinaryProtocol
 import org.powerapi.PowerDisplay
@@ -30,7 +32,6 @@ import org.powerapi.core.power.Power
 import org.powerapi.core.target.Target
 import org.zeromq.ZMQ
 import scala.collection.JavaConversions._
-
 
 /**
  * This display is used to report data into a ZeroMQ broker.
@@ -47,7 +48,7 @@ class ThriftDisplay(ip: String, port: Int, sender: String, topic: String) extend
 
   var interval = 0
 
-  def display(timestamp: Long, targets: Set[Target], devices: Set[String], power: Power): Unit = {
+  def display(muid: UUID, timestamp: Long, targets: Set[Target], devices: Set[String], power: Power): Unit = {
     val data: java.util.Map[String, String] = Map("power" -> s"${power.toWatts}", "type" -> "bitwatts", "interval_index" -> s"$interval")
     val message = serializer.serialize(new Message(data))
     publisher.sendMore(topic)

@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -27,7 +28,9 @@ import org.powerapi.bitwatts.UnitTest
 class VirtioSensorConfigurationSuite extends UnitTest {
 
   "The VirtioSensorConfiguration" should "read correctly the values from a resource file" in {
-    val configuration = new VirtioSensorConfiguration {}
-    configuration.port should equal(4)
+    val configuration1 = new VirtioSensorConfiguration(None)
+    val configuration2 = new VirtioSensorConfiguration(Some("prefix"))
+    configuration1.port should equal(4)
+    configuration2.port should equal(1)
   }
 }
