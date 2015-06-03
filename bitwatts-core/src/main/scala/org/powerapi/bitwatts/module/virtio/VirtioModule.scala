@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -23,15 +24,17 @@
 package org.powerapi.bitwatts.module.virtio
 
 import org.powerapi.PowerModule
-import org.powerapi.core.LinuxHelper
+import org.powerapi.core.OSHelper
 
-class VirtioModule(port: Int) extends PowerModule {
-  lazy val underlyingSensorsClasses  = Seq((classOf[VirtioSensor], Seq(new LinuxHelper, port)))
+class VirtioModule(osHelper: OSHelper, port: Int) extends PowerModule {
+  lazy val underlyingSensorsClasses  = Seq((classOf[VirtioSensor], Seq(osHelper, port)))
   lazy val underlyingFormulaeClasses = Seq((classOf[VirtioFormula], Seq()))
 }
 
-object VirtioModule extends VirtioSensorConfiguration {
-  def apply(): VirtioModule = {
-    new VirtioModule(port)
+object VirtioModule {
+  def apply(prefixConf: Option[String] = None, osHelper: OSHelper): VirtioModule = {
+    val virtioSensorConf = new VirtioSensorConfiguration(prefixConf)
+
+    new VirtioModule(osHelper, virtioSensorConf.port)
   }
 }

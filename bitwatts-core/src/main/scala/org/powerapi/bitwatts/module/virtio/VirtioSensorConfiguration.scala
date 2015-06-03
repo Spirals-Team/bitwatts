@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -30,9 +31,8 @@ import org.powerapi.core.{ConfigValue, Configuration}
  * @author <a href="mailto:maxime.colmant@gmail.com">Maxime Colmant</a>
  * @author <a href="mailto:mascha.kurpicz@unine.ch">Mascha Kurpicz</a>
  */
-trait VirtioSensorConfiguration extends Configuration {
-
-  lazy val port = load { _.getInt("powerapi.virtio.port") } match {
+class VirtioSensorConfiguration(prefix: Option[String]) extends Configuration(prefix) {
+  lazy val port = load { _.getInt(s"${configurationPath}powerapi.virtio.port") } match {
     case ConfigValue(p) => p
     case _ => 0
   }

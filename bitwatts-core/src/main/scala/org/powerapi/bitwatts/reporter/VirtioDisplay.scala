@@ -3,7 +3,8 @@
  *
  * This file is a part of BitWatts.
  *
- * Copyright (C) 2011-2014 Inria, University of Lille 1.
+ * Copyright (C) 2011-2015 Inria, University of Lille 1,
+ * University of Neuchâtel.
  *
  * BitWatts is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -24,12 +25,12 @@ package org.powerapi.bitwatts.reporter
 
 import java.io.File
 import java.net.Socket
-
+import java.util.UUID
 import org.apache.logging.log4j.LogManager
 import org.newsclub.net.unix.{AFUNIXSocketAddress, AFUNIXSocket}
 import org.powerapi.PowerDisplay
 import org.powerapi.core.power.Power
-import org.powerapi.core.target.{Process, Target}
+import org.powerapi.core.target.Target
 
 /**
  * This display is used to report data inside a JUnixSocket.
@@ -83,7 +84,7 @@ class VirtioDisplay(path: String) extends PowerDisplay {
     }
   }
 
-  def display(timestamp: Long, targets: Set[Target], device: Set[String], power: Power): Unit = {
+  def display(muid: UUID, timestamp: Long, targets: Set[Target], device: Set[String], power: Power): Unit = {
     initOutput()
     writePower(targets, power)
   }
